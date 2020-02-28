@@ -1,0 +1,37 @@
+{
+  "name": "fast_user",
+  "version": "0.1.0",
+  "description": "Fast user using Fast Auth",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hugodecasta/fast_user.git"
+  },
+  "keywords": [
+    "Fast",
+    "user",
+    "auth",
+    "otp"
+  ],
+  "author": "Hugo Castaneda",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hugodecasta/fast_user/issues"
+  },
+  "homepage": "https://github.com/hugodecasta/fast_user#readme",
+  "dependencies": {
+    "automatic-otp": "^1.0.4",
+    "fast_auth": "git+https://github.com/hugodecasta/fast_auth.git",
+    "nanoid": "^2.1.11",
+    "notp": "^2.0.3",
+    "otp-key": "0.0.1",
+    "qrcode-terminal": "^0.12.0",
+    "totp-generator": "0.0.7"
+  },
+  "devDependencies": {
+    "readline-sync": "^1.4.10"
+  }
+}

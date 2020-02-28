@@ -25,13 +25,9 @@
   "dependencies": {
     "automatic-otp": "^1.0.4",
     "fast_auth": "git+https://github.com/hugodecasta/fast_auth.git",
-    "nanoid": "^2.1.11",
-    "notp": "^2.0.3",
-    "otp-key": "0.0.1",
+    "fast_prompt": "file:fast_prompt",
     "qrcode-terminal": "^0.12.0",
+    "readline-sync": "^1.4.10",
     "totp-generator": "0.0.7"
-  },
-  "devDependencies": {
-    "readline-sync": "^1.4.10"
   }
 }

@@ -4,6 +4,7 @@ const FastAuth = require('fast_auth')
 const OTP = require('automatic-otp')
 const otp = new OTP();
 const totp = require('totp-generator')
+const prompt_sys = require('fast_prompt')
 
 // ---------------------------------------------- USERS
 
@@ -21,7 +22,7 @@ class Users {
 
     create_user(name) {
         let key = otp.generate(10,{specialCharacters:false,digits:false}).token
-        let user_data = {name,key,valid:false,file:{},keys:{}}
+        let user_data = {name,key,active:false,file:{},keys:{}}
         this.fa.create_key(user_data,key=name)
         return user_data
     }
@@ -30,23 +31,40 @@ class Users {
         return this.fa.remove_key(name)
     }
 
+    user_exists(name) {
+        return this.fa.get_key_data(name) != null
+    }
+
     // --------------------------------------------- VALID
 
-    to_validate(name) {
+    to_activate(name) {
         let key_data = this.fa.get_key_data(name)
         if(key_data == null) {
             return null
         }
-        let is_valid = key_data.get_data('valid')
+        let is_valid = key_data.get_data('active')
         return is_valid?false:key_data.get_data('key')
     }
 
-    unvalidate(name) {
+    is_activated(name) {
+        let key_to_validate = this.to_activate(name)
+        if(key_to_validate == null) {
+            return null
+        }
+        return key_to_validate === false
+    }
+
+    activate(name,code) {
+        let token = this.get_token(name,code,Date.now())
+        return token!=null
+    }
+
+    deactivate(name) {
         let key_data = this.fa.get_key_data(name)
         if(key_data == null) {
             return null
         }
-        return key_data.set_data('valid',false)
+        return key_data.set_data('active',false)
     }
 
     // --------------------------------------------- TOKEN
@@ -58,7 +76,7 @@ class Users {
         }
         let true_totp = totp(key_data.get_data('key'))
         if(user_totp == true_totp) {
-            key_data.set_data('valid',true)
+            key_data.set_data('active',true)
             return this.fa.get_token(name,end_time)
         }
         return null
@@ -88,72 +106,64 @@ class Users {
 
 if(process.argv[2] == 'prompt') {
 
-let rl = require('readline-sync').question
 let user_dir = process.argv[3] || './user_data'
 let users = new Users(user_dir)
 
-while(true) {
+prompt_sys.looper('users > ',prompt_sys.create_commands({
 
-    let command = rl('> ')
+    'create':function(name) {
+        users.create_user(name)
+        return 'user '+name+' created !'
+    },
+    'manage_user':function(name) {
 
-    let command_map = {
-        'create':function() {
-            let name = rl('  user name ? ')
-            users.create_user(name)
-            console.log('user created')
-        },
-        'delete':function() {
-            let name = rl('  user name ? ')
-            console.log(users.delete_user(name))
-        },
-        'unvalidate':function() {
-            let name = rl('  user name ? ')
-            console.log(users.unvalidate(name))
-        },
-        'token':function() {
-            let name = rl('  connect name ? ')
-            let key_to_validate = users.to_validate(name)
-            if(key_to_validate == null) {
-                console.log('user does not exits')
-                return
-            }
-            if(key_to_validate != false) {
-                let app_name = rl('  app name ? ')
-                let issuer = rl('  issuer ? ')
-                let qrcode = require('qrcode-terminal')
-                let auth_code = 'otpauth://totp/'+app_name+':'+name+'?secret='+key_to_validate+'&issuer='+issuer
-                console.log(key_to_validate)
-                qrcode.generate(auth_code)
-                let totpcode = rl('  validating code ? ')
-                let token = users.get_token(name,totpcode,Date.now())
-                if(token == null) {
-                    console.log('Oops !! invalid code')
-                    return
-                }
-                console.log('user validated')
-                return
-            }
-            let totpcode = rl('  code ?')
-            let token = users.get_token(name,totpcode)
-            if(token == null) {
-                console.log('Oops !! invalid code')
-                return
-            }
-            console.log(token)
-        },
-        'data':function() {
-            let token = rl('   token ? ')
-            let prop = rl('   prop ? ')
-            console.log(users.get_user_data(token,prop))
+        if(!users.user_exists(name)) {
+            throw 'user '+name+' not found !'
         }
+
+        prompt_sys.looper('user '+name+' > ',prompt_sys.create_commands({
+
+            'deactivate':function() {
+                if(!users.is_activated(name)) {
+                    throw 'user not activated'
+                }
+                users.deactivate(name)
+                return 'user deactivated'
+            },
+            'activate':function() {
+                if(users.is_activated(name)) {
+                    throw 'user already validated'
+                }
+                let key_to_validate = users.to_activate(name)
+                let qrdata = prompt_sys.ask_data('app name','issuer')
+                let auth_uri = 'otpauth://totp/'+qrdata['app name']+':'+name+'?secret='+key_to_validate+'&issuer='+qrdata.issuer
+                require('qrcode-terminal').generate(auth_uri)
+                let code = prompt_sys.ask_data('code').code
+                while(!users.activate(name,code)){
+                    console.log('   wrong totp code'.red)
+                    code = prompt_sys.ask_data('code').code
+                }
+                return 'user activated !'
+            },
+            'token': function() {
+                if(!users.is_activated(name)) {
+                    throw 'user is not validated'
+                }
+                let code = prompt_sys.ask_data('code').code
+                let token = users.get_token(name,code,Date.now()+30000)
+                console.log('coucou'+token)
+                return 'token: '+token+' (this token long 30 secs)'
+            },
+            'delete':function() {
+                if(users.delete_user(name)) {
+                    return false
+                }
+            }
+
+        }))
+
     }
 
-    if(!(command in command_map)) {
-        console.log('command not found !')
-    } else {
-        command_map[command]()
-    }
-
-}
+}))
 
 }

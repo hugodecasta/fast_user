@@ -25,7 +25,7 @@
   "dependencies": {
     "automatic-otp": "^1.0.4",
     "fast_auth": "git+https://github.com/hugodecasta/fast_auth.git",
-    "fast_prompt": "file:fast_prompt",
+    "fast_prompt": "^1.0.1",
     "qrcode-terminal": "^0.12.0",
     "readline-sync": "^1.4.10",
     "totp-generator": "0.0.7"

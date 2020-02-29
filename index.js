@@ -104,6 +104,8 @@ class Users {
 
 }
 
+module.exports = Users
+
 if(process.argv[2] == 'prompt') {
 
 let user_dir = process.argv[3] || './user_data'

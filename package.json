@@ -28,6 +28,7 @@
     "fast_prompt": "^1.0.1",
     "qrcode-terminal": "^0.12.0",
     "readline-sync": "^1.4.10",
+    "storage": "git+https://github.com/hugodecasta/storage.git",
     "totp-generator": "0.0.7"
   }
 }

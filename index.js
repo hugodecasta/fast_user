@@ -1,6 +1,7 @@
 // ---------------------------------------------- REQUIRES
 
 const FastAuth = require('fast_auth')
+const Storage = require('storage')
 const OTP = require('automatic-otp')
 const otp = new OTP();
 const totp = require('totp-generator')
@@ -15,20 +16,29 @@ class Users {
     constructor(user_dir) {
 
         this.fa = new FastAuth(user_dir)
-
+        this.storage = new Storage(user_dir)
     }
 
     // --------------------------------------------- CREATE
 
-    create_user(name) {
+    create_user(name,domain='') {
         let key = otp.generate(10,{specialCharacters:false,digits:false}).token
-        let user_data = {name,key,active:false,file:{},keys:{}}
+        let user_data = {name,key,active:false,file:{},api_key:null,domain}
         this.fa.create_key(user_data,key=name)
+        let list = this.list()
+        list[name] = true
+        this.storage.write_key('list',list)
         return user_data
     }
 
     delete_user(name) {
-        return this.fa.remove_key(name)
+        let ok = this.fa.remove_key(name)
+        if(ok) {
+            let list = this.list()
+            delete list[name]
+            this.storage.write_key('list',list)
+        }
+        return ok
     }
 
     user_exists(name) {
@@ -54,9 +64,47 @@ class Users {
         return key_to_validate === false
     }
 
+    get_domain(name) {
+        let key_data = this.fa.get_key_data(name)
+        if(key_data == null) {
+            return null
+        }
+        return key_data.get_data('domain')
+    }
+
     activate(name,code) {
         let token = this.get_token(name,code,Date.now())
         return token!=null
+    }
+
+    // --------------------------------------------- MANAGER
+
+    list() {
+        let list = this.storage.read_key('list')
+        if(list == null) {
+            return {}
+        }
+        return list
+    }
+
+    force_get_data(name) {
+        let key_data = this.fa.get_key_data(name)
+        if(key_data == null) {
+            return null
+        }
+        let data = key_data.data()
+        delete data.key
+        return data
+    }
+
+    set_api_key(name, api_key) {
+        let key_data = this.fa.get_key_data(name)
+        key_data.set_data('api_key',api_key)
+    }
+
+    set_domain(name, domain) {
+        let key_data = this.fa.get_key_data(name)
+        return key_data.set_data('domain',domain)
     }
 
     deactivate(name) {
@@ -69,7 +117,7 @@ class Users {
 
     // --------------------------------------------- TOKEN
 
-    get_token(name,user_totp,end_time=Date.now()+10000) {
+    get_token(name,user_totp,force_new=false) {
         let key_data = this.fa.get_key_data(name)
         if(key_data == null) {
             return null
@@ -77,29 +125,39 @@ class Users {
         let true_totp = totp(key_data.get_data('key'))
         if(user_totp == true_totp) {
             key_data.set_data('active',true)
-            return this.fa.get_token(name,end_time)
+            let token = this.fa.get_token(name,Date.now()*1000)
+            if(force_new) {
+                this.fa.revoke_token(token)
+                token = this.fa.get_token(name,Date.now()*1000)
+            }
+            return token
         }
         return null
     }
 
-    // --------------------------------------------- DATA
-
-    get_user_data(token,prop) {
+    token_valid(token) {
         let token_data = this.fa.get_token_data(token)
-        if(token_data == null || prop == 'key' || prop == 'name' || token_data.get_data('valid')==false) {
-            return null
-        }
-        return token_data.get_data(prop)
+        return token_data != null
     }
 
-    set_user_data(token,prop,value) {
-        let data = get_user_data(token)
-        if(data == null || prop == 'key' || prop == 'name' || token_data.get_data('valid')==false) {
+    remove_token(token) {
+        this.fa.revoke_token(token)
+    }
+
+    // --------------------------------------------- DATA
+
+    get_user(token) {
+        let token_data = this.fa.get_token_data(token)
+        if(token_data == null) {
             return null
         }
-        let name = data.name
-        this.fa.key_data(name).set_data(prop,value)
-        this.fa.get_token_data(token).set_data(prop,value)
+        let data = token_data.data()
+        delete data.key
+        return data
+    }
+
+    set_files(token, files) {
+
     }
 
 }
@@ -113,6 +171,12 @@ let users = new Users(user_dir)
 
 prompt_sys.looper('users > ',prompt_sys.create_commands({
 
+    'list':function() {
+        let list = users.list()
+        for(let name in list) {
+            console.log('   '+name)
+        }
+    },
     'create':function(name) {
         users.create_user(name)
         return 'user '+name+' created !'
@@ -160,12 +224,28 @@ prompt_sys.looper('users > ',prompt_sys.create_commands({
                 if(users.delete_user(name)) {
                     return false
                 }
+            },
+            'data':function() {
+                console.log(users.force_get_data(name))
+            },
+            'set_key':function(key) {
+                return users.set_api_key(name,key)
+            },
+            'set_domain':function(domain) {
+                return users.set_domain(name,domain)
             }
 
+        },{
+            'sk':'set_key',
+            'sd':'set_domain',
+            'd':'data',
+            't':'token'
         }))
-
     }
-
+},{
+    'l':'list',
+    'mu':'manage_user',
+    'c':'create'
 }))
 
 }

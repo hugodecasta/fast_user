@@ -151,7 +151,7 @@ class Users {
             return null
         }
         let name = token_data.get_data('name')
-        let data = force_get_data(name)
+        let data = this.force_get_data(name)
         delete data.key
         return data
     }

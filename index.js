@@ -87,9 +87,7 @@ class Users {
     }
 
     force_get_data(name) {
-        console.log('get ',name)
         let key_data = this.fa.get_key_data(name)
-        console.log(key_data)
         if(key_data == null) {
             return null
         }
@@ -152,13 +150,10 @@ class Users {
         if(token_data == null) {
             return null
         }
-        let data = token_data.data()
+        let name = token_data.get_data('name')
+        let data = force_get_data(name)
         delete data.key
         return data
-    }
-
-    set_files(token, files) {
-
     }
 
 }

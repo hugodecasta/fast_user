@@ -14,7 +14,7 @@ class Users {
 
     constructor(user_dir) {
 
-        this.fa = new FastAuth(user_dir)
+        this.fa = new FastAuth(user_dir,false)
         this.storage = new Storage(user_dir)
     }
 
@@ -23,10 +23,10 @@ class Users {
     create_user(name,domain='') {
         let key = otp.generate(10,{specialCharacters:false,digits:false}).token
         let user_data = {name,key,active:false,file:{},api_key:null,domain}
-        this.fa.create_key(user_data,key=name)
+        this.fa.create_key(name,user_data,key=name)
         let list = this.list()
         list[name] = true
-        this.storage.write_key('user_list',list)
+        this.storage.write_key('list',list)
         return user_data
     }
 
@@ -35,7 +35,7 @@ class Users {
         if(ok) {
             let list = this.list()
             delete list[name]
-            this.storage.write_key('user_list',list)
+            this.storage.write_key('list',list)
         }
         return ok
     }
@@ -87,7 +87,9 @@ class Users {
     }
 
     force_get_data(name) {
+        console.log('get ',name)
         let key_data = this.fa.get_key_data(name)
+        console.log(key_data)
         if(key_data == null) {
             return null
         }

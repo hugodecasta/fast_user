@@ -26,7 +26,7 @@ class Users {
         this.fa.create_key(user_data,key=name)
         let list = this.list()
         list[name] = true
-        this.storage.write_key('list',list)
+        this.storage.write_key('user_list',list)
         return user_data
     }
 
@@ -35,7 +35,7 @@ class Users {
         if(ok) {
             let list = this.list()
             delete list[name]
-            this.storage.write_key('list',list)
+            this.storage.write_key('user_list',list)
         }
         return ok
     }
@@ -178,6 +178,7 @@ prompt_sys.looper('users > ',prompt_sys.create_commands({
         }
     },
     'create':function(name) {
+        console.log('creating name')
         users.create_user(name)
         return 'user '+name+' created !'
     },

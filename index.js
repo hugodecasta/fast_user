@@ -5,7 +5,6 @@ const Storage = require('storage')
 const OTP = require('automatic-otp')
 const otp = new OTP();
 const totp = require('totp-generator')
-const prompt_sys = require('fast_prompt')
 
 // ---------------------------------------------- USERS
 
@@ -165,6 +164,7 @@ class Users {
 module.exports = Users
 
 if(process.argv[2] == 'prompt') {
+const prompt_sys = require('fast_prompt')
 
 let user_dir = process.argv[3] || './user_data'
 let users = new Users(user_dir)
